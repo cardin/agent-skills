@@ -1,5 +1,7 @@
 # agent-skills
 
+[![skills.sh](https://skills.sh/b/cardin/agent-skills)](https://skills.sh/cardin/agent-skills)
+
 Agent [skills](https://skills.sh) by [Cardin Lee](https://github.com/cardin).
 
 ## Install
