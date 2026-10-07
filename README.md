@@ -38,7 +38,8 @@ or "Refresh the Craft workflow section in AGENTS.md."
 
 **Behavior:** preserves unrelated/plugin sections, formats headings, paragraphs,
 lists, bold, and inline code, excludes the `IGNORE` heading and everything after it,
-and leaves unchanged files untouched. Failed imports do not replace existing content.
+and leaves unchanged files untouched. List items have no blank lines between them;
+headings and paragraphs retain spacing. Failed imports do not replace existing content.
 
 ```bash
 python3 <skill-dir>/scripts/sync.py "CRAFT_URL"

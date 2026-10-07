@@ -46,6 +46,29 @@ class CraftSyncTests(unittest.TestCase):
         ])]}
         self.assertEqual(sync.render(document), "😀 use `fd` and `` `x` ``")
 
+    def test_compact_bullet_list_and_paragraph_spacing(self):
+        document = {"blocks": [
+            block("Rules", textStyle="title"),
+            block("Introduction"),
+            block("First", listStyle="bullet"),
+            block(""),
+            block("Second", listStyle="bullet"),
+            block("Conclusion"),
+            block("Another paragraph"),
+        ]}
+        self.assertEqual(sync.render(document), "# Rules\n\nIntroduction\n\n- First\n- Second\n\nConclusion\n\nAnother paragraph")
+
+    def test_compact_numbered_list_and_list_transitions(self):
+        document = {"blocks": [
+            block("First", listStyle="numbered", userDefinedListNumber=1),
+            block("Second", listStyle="numbered", userDefinedListNumber=2),
+            block("Bullet", listStyle="bullet"),
+            block("Another bullet", listStyle="bullet"),
+            block("Next section", textStyle="subtitle"),
+            block("New list", listStyle="numbered", userDefinedListNumber=1),
+        ]}
+        self.assertEqual(sync.render(document), "1. First\n2. Second\n\n- Bullet\n- Another bullet\n\n## Next section\n\n1. New list")
+
     def test_merge_and_source_reuse(self):
         before, after = "# Personal\r\n", "\r\n<!-- plugin:start -->\nPlugin\n<!-- plugin:end -->"
         old = before + "<!-- custom:start -->\nOld\n<!-- custom:end -->" + after

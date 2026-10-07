@@ -22,6 +22,7 @@ def parse_url(url):
 
 def render(document):
     lines = []
+    previous_list = None
     for block in document["blocks"]:
         if not block["content"].strip():
             continue
@@ -45,10 +46,13 @@ def render(document):
             else:
                 fence, pad = "**", ""
             text = text[:offset] + (fence + pad + span + pad + fence).encode("utf-16-le") + text[offset + length:]
-        lines.append(prefix + text.decode("utf-16-le").rstrip())
+        list_style = style.get("listStyle")
+        separator = "\n" if list_style in ("bullet", "numbered") and list_style == previous_list else "\n\n"
+        lines.append((separator if lines else "") + prefix + text.decode("utf-16-le").rstrip())
+        previous_list = list_style
     if not lines:
         raise ValueError("Empty import; refusing to modify AGENTS.md")
-    return "\n\n".join(lines)
+    return "".join(lines)
 
 
 def merge(old, markdown, url, share_id, block_name=None):
