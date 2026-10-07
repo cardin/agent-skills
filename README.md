@@ -22,6 +22,40 @@ npx skills add cardin/agent-skills --list
 
 ## Skills
 
+### `craft-to-agents`
+
+Import a public Craft document into its own section of `AGENTS.md`, or refresh it
+later using the source link recorded inside the section.
+
+```bash
+npx skills add cardin/agent-skills --skill craft-to-agents -g -a opencode -y
+```
+
+Once installed, ask your agent: "Import this Craft document into AGENTS.md: URL"
+or "Refresh the Craft workflow section in AGENTS.md."
+
+**Requirements:** Python 3.9+, `curl`, and a public `craft.me` share link.
+
+**Behavior:** preserves unrelated/plugin sections, formats headings, paragraphs,
+lists, bold, and inline code, excludes the `IGNORE` heading and everything after it,
+and leaves unchanged files untouched. Failed imports do not replace existing content.
+
+```bash
+python3 <skill-dir>/scripts/sync.py "CRAFT_URL"
+python3 <skill-dir>/scripts/sync.py "CRAFT_URL" --target ./AGENTS.md --block my-rules
+```
+
+The default target is `~/.config/opencode/AGENTS.md`. Existing source-linked blocks
+are reused; new blocks use `craft-<share-id>`. For an older block without a source
+link, use `--block` with its current name to migrate it without creating a duplicate.
+Craft's share API is undocumented, so future API changes may require an update.
+
+Run the offline tests:
+
+```bash
+python3 -m unittest discover -s skills/craft-to-agents/tests -v
+```
+
 ### `wsl-screenshot`
 
 Capture the Windows desktop from inside WSL and view the result.
@@ -77,6 +111,12 @@ the agent opens with its image-reading tool.
 ```text
 agent-skills/
 └── skills/
+    ├── craft-to-agents/
+    │   ├── SKILL.md
+    │   ├── scripts/
+    │   │   └── sync.py
+    │   └── tests/
+    │       └── test_sync.py
     └── wsl-screenshot/
         ├── SKILL.md
         └── scripts/
