@@ -2,7 +2,7 @@
 name: craft-to-agents
 description: "Install or refresh instructions from a public Craft document in AGENTS.md. Use when the user provides a Craft link to import, asks to update a Craft-managed section, or asks to refresh instructions from the source links saved in AGENTS.md. Preserves unrelated sections and excludes the IGNORE section onward."
 license: MIT
-compatibility: Requires Python 3.9+, curl, and a public craft.me share link.
+compatibility: Requires Python 3.9+, curl, a public craft.me share link, and the read-craft skill.
 ---
 
 # Craft instructions → AGENTS.md
@@ -10,6 +10,10 @@ compatibility: Requires Python 3.9+, curl, and a public craft.me share link.
 Use `scripts/sync.py` beside this file; do not hand-rewrite the downloaded instructions.
 The script records a source link inside each independently managed block so future
 updates can recover the original document.
+
+This skill only decides *where* a Craft document lands. Fetching its Markdown is
+delegated to the `read-craft` skill, and the block edit itself is handled by the
+source-agnostic `scripts/blocks.py`; `sync.py` just wires them together.
 
 ## Workflow
 
@@ -29,6 +33,8 @@ updates can recover the original document.
    ```bash
    # Choose a project file or a custom block name
    python3 "<skill-dir>/scripts/sync.py" "CRAFT_URL" --target ./AGENTS.md --block my-rules
+   # Point at a specific read-craft install
+   python3 "<skill-dir>/scripts/sync.py" "CRAFT_URL" --read-craft ~/.agents/skills/read-craft/scripts/fetch.py
    ```
 
    Existing blocks with the same source link are reused automatically. When migrating
@@ -38,10 +44,24 @@ updates can recover the original document.
 4. Report the target, block name, and whether it changed. Do not claim installation
    succeeded if the command failed, and do not modify unrelated sections to fix an error.
 
+## Finding read-craft
+
+`sync.py` locates the `read-craft` skill's `fetch.py` in this order, and fails with a
+clear message if none exist:
+
+1. `--read-craft <path>`, then
+2. the `READ_CRAFT_SCRIPT` environment variable, then
+3. a sibling skill, `<skills-root>/read-craft/scripts/fetch.py`, then
+4. `~/.agents/skills/`, `~/.config/opencode/skills/`, `~/.claude/skills/`.
+
+If the `read-craft` skill is missing, install it (`npx skills add cardin/agent-skills
+--skill read-craft`) rather than reimplementing the download.
+
 ## Behavior and boundaries
 
 - New blocks default to `craft-<share-id>`; `--block` selects a stable custom name.
-- The source URL is included in the block, with a reminder to refresh using this skill.
+- The source URL is included in the block, with a refresh reminder naming this skill
+  (`--hint` overrides the recorded skill name).
 - The first heading named exactly `IGNORE` and everything after it are excluded.
 - Supports headings, paragraphs, bullet/numbered lists, bold, and inline code.
 - Consecutive items in each list have no blank lines; headings and paragraphs retain spacing.

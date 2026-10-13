@@ -28,13 +28,14 @@ Import a public Craft document into its own section of `AGENTS.md`, or refresh i
 later using the source link recorded inside the section.
 
 ```bash
-npx skills add cardin/agent-skills --skill craft-to-agents -g -a opencode -y
+npx skills add cardin/agent-skills --skill craft-to-agents --skill read-craft -g -a opencode -y
 ```
 
 Once installed, ask your agent: "Import this Craft document into AGENTS.md: URL"
 or "Refresh the Craft workflow section in AGENTS.md."
 
-**Requirements:** Python 3.9+, `curl`, and a public `craft.me` share link.
+**Requirements:** Python 3.9+, `curl`, a public `craft.me` share link, and the
+[`read-craft`](#read-craft) skill (it does the download; this skill does the placement).
 
 **Behavior:** preserves unrelated/plugin sections, formats headings, paragraphs,
 lists, bold, and inline code, excludes the `IGNORE` heading and everything after it,
@@ -49,12 +50,42 @@ python3 <skill-dir>/scripts/sync.py "CRAFT_URL" --target ./AGENTS.md --block my-
 The default target is `~/.config/opencode/AGENTS.md`. Existing source-linked blocks
 are reused; new blocks use `craft-<share-id>`. For an older block without a source
 link, use `--block` with its current name to migrate it without creating a duplicate.
-Craft's share API is undocumented, so future API changes may require an update.
+Markdown is fetched by `read-craft`; the block edit itself is source-agnostic
+(`scripts/blocks.py` has no Craft knowledge). Craft's share API is undocumented, so
+future API changes may require an update.
 
 Run the offline tests:
 
 ```bash
 python3 -m unittest discover -s skills/craft-to-agents/tests -v
+```
+
+### `read-craft`
+
+Fetch the Markdown of a public Craft (`craft.me`) share link. Transport only: it
+returns the Markdown and metadata and never writes files. Use it directly to read,
+quote, or summarize a Craft document, or as the download layer for another skill.
+
+```bash
+npx skills add cardin/agent-skills --skill read-craft -g -a opencode -y
+```
+
+```bash
+python3 <skill-dir>/scripts/fetch.py "CRAFT_URL"         # Markdown to stdout
+python3 <skill-dir>/scripts/fetch.py "CRAFT_URL" --json  # {"url","host","share_id","markdown"}
+python3 <skill-dir>/scripts/fetch.py "CRAFT_URL" --raw   # raw Craft share JSON
+```
+
+`--json` lets a caller record the canonical source link and derive a stable block
+name without re-parsing the URL. Only public `https://<host>.craft.me/<share-id>`
+links are accepted; the `IGNORE` heading and everything after it are excluded. The
+Craft share API is undocumented, so `--raw` exists to inspect it when the format
+changes.
+
+Run the offline tests:
+
+```bash
+python3 -m unittest discover -s skills/read-craft/tests -v
 ```
 
 ### `wsl-screenshot`
@@ -115,9 +146,17 @@ agent-skills/
     ├── craft-to-agents/
     │   ├── SKILL.md
     │   ├── scripts/
+    │   │   ├── blocks.py
     │   │   └── sync.py
     │   └── tests/
+    │       ├── test_blocks.py
     │       └── test_sync.py
+    ├── read-craft/
+    │   ├── SKILL.md
+    │   ├── scripts/
+    │   │   └── fetch.py
+    │   └── tests/
+    │       └── test_fetch.py
     └── wsl-screenshot/
         ├── SKILL.md
         └── scripts/
