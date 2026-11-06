@@ -7,161 +7,71 @@ Agent [skills](https://skills.sh) by [Cardin Lee](https://github.com/cardin).
 ## Install
 
 ```bash
-# Install to OpenCode globally
-npx skills add cardin/agent-skills --skill wsl-screenshot -g -a opencode -y
+# Single skill, OpenCode globally
+npx skills add cardin/agent-skills --skill <name> -g -a opencode -y
 
-# Or pick agents interactively (Claude Code, Codex, Cursor, ...)
-npx skills add cardin/agent-skills --skill wsl-screenshot
-```
-
-Preview without installing:
-
-```bash
+# Browse / pick agents interactively
 npx skills add cardin/agent-skills --list
 ```
 
 ## Skills
 
+| Skill | What it does |
+| ----- | ------------ |
+| [`craft-to-agents`](#craft-to-agents) | Import / refresh `AGENTS.md` sections from a public Craft doc |
+| [`read-craft`](#read-craft) | Fetch a public Craft share link as Markdown (transport only) |
+| [`wsl-screenshot`](#wsl-screenshot) | Capture the Windows desktop from inside WSL |
+| [`living-docs-reconcile`](#living-docs-reconcile) | Merge a finished feature spec into living docs |
+
 ### `craft-to-agents`
 
-Import a public Craft document into its own section of `AGENTS.md`, or refresh it
-later using the source link recorded inside the section.
+Import a public Craft document into its own `AGENTS.md` section, or refresh it later via its recorded source link. Preserves unrelated sections.
 
 ```bash
 npx skills add cardin/agent-skills --skill craft-to-agents --skill read-craft -g -a opencode -y
 ```
 
-Once installed, ask your agent: "Import this Craft document into AGENTS.md: URL"
-or "Refresh the Craft workflow section in AGENTS.md."
-
-**Requirements:** Python 3.9+, `curl`, a public `craft.me` share link, and the
-[`read-craft`](#read-craft) skill (it does the download; this skill does the placement).
-
-**Behavior:** preserves unrelated/plugin sections, formats headings, paragraphs,
-lists, bold, and inline code, excludes the `IGNORE` heading and everything after it,
-and leaves unchanged files untouched. List items have no blank lines between them;
-headings and paragraphs retain spacing. Failed imports do not replace existing content.
-
-```bash
-python3 <skill-dir>/scripts/sync.py "CRAFT_URL"
-python3 <skill-dir>/scripts/sync.py "CRAFT_URL" --target ./AGENTS.md --block my-rules
-```
-
-The default target is `~/.config/opencode/AGENTS.md`. Existing source-linked blocks
-are reused; new blocks use `craft-<share-id>`. For an older block without a source
-link, use `--block` with its current name to migrate it without creating a duplicate.
-Markdown is fetched by `read-craft`; the block edit itself is source-agnostic
-(`scripts/blocks.py` has no Craft knowledge). Craft's share API is undocumented, so
-future API changes may require an update.
-
-Run the offline tests:
-
-```bash
-python3 -m unittest discover -s skills/craft-to-agents/tests -v
-```
+Requires `read-craft`. Details: `skills/craft-to-agents/SKILL.md`.
 
 ### `read-craft`
 
-Fetch the Markdown of a public Craft (`craft.me`) share link. Transport only: it
-returns the Markdown and metadata and never writes files. Use it directly to read,
-quote, or summarize a Craft document, or as the download layer for another skill.
+Fetch `https://<host>.craft.me/<share-id>` as Markdown + metadata. Never writes files. Also used by `craft-to-agents`.
 
 ```bash
 npx skills add cardin/agent-skills --skill read-craft -g -a opencode -y
 ```
 
-```bash
-python3 <skill-dir>/scripts/fetch.py "CRAFT_URL"         # Markdown to stdout
-python3 <skill-dir>/scripts/fetch.py "CRAFT_URL" --json  # {"url","host","share_id","markdown"}
-python3 <skill-dir>/scripts/fetch.py "CRAFT_URL" --raw   # raw Craft share JSON
-```
-
-`--json` lets a caller record the canonical source link and derive a stable block
-name without re-parsing the URL. Only public `https://<host>.craft.me/<share-id>`
-links are accepted; the `IGNORE` heading and everything after it are excluded. The
-Craft share API is undocumented, so `--raw` exists to inspect it when the format
-changes.
-
-Run the offline tests:
-
-```bash
-python3 -m unittest discover -s skills/read-craft/tests -v
-```
+Details: `skills/read-craft/SKILL.md`.
 
 ### `wsl-screenshot`
 
-Capture the Windows desktop from inside WSL and view the result.
-
-The gap this fills: existing screenshot skills cover macOS, native Linux (X11), and native
-Windows, but none bridge **WSL → Windows**. From WSL you cannot use `scrot`/`import`
-(no Linux display) and you cannot call a `.ps1` by its Linux path, so a naive screenshot
-skill fails. This one handles the bridge for you.
-
-**Requirements**
-
-- WSL with Windows interop enabled (`powershell.exe` reachable from bash)
-- An unlocked, connected Windows desktop session (a locked session captures black)
-
-**Usage**
-
-Once installed, just ask your agent to look at your screen. Under the hood it runs:
+See the Windows desktop from WSL. Bridges WSL → PowerShell → PNG, then read it with the `read` tool. Native Linux/macOS screenshot tools don't apply here.
 
 ```bash
-bash <skill-dir>/scripts/capture.sh          # all monitors
-bash <skill-dir>/scripts/capture.sh -m 2     # one monitor
-bash <skill-dir>/scripts/capture.sh -w 1600  # downscale wide captures
-bash <skill-dir>/scripts/capture.sh -o DIR   # custom output directory
+npx skills add cardin/agent-skills --skill wsl-screenshot -g -a opencode -y
 ```
 
-It prints the image's WSL path (e.g. `/mnt/c/Users/you/AppData/Local/Temp/...png`), which
-the agent opens with its image-reading tool.
+Requires WSL with `powershell.exe` and an unlocked desktop. Details: `skills/wsl-screenshot/SKILL.md`.
 
-**How it works**
+### `living-docs-reconcile`
 
-1. `scripts/capture.sh` locates itself, converts that path with `wslpath -w`, and calls
-   `powershell.exe` on `scripts/screenshot.ps1`.
-2. `screenshot.ps1` captures the virtual desktop (all monitors) or a single display with
-   .NET `CopyFromScreen`, opting into DPI awareness, and writes a PNG to Windows temp.
-3. `capture.sh` converts the result back with `wslpath -u` and prints the WSL path.
+Reconcile `specs/<feature>/` into `docs/` living docs before opening the MR. Outcomes: `complete` (merge + delete spec), `partial` (merge stable content, keep spec), `abandoned` (record ADR, archive spec). Emits a disposition manifest for the MR description.
 
-**Notes**
+```bash
+npx skills add cardin/agent-skills --skill living-docs-reconcile -g -a opencode -y
+```
 
-- Reading `/mnt/c/...` may need an `external_directory` permission entry in
-  `opencode.jsonc`. If access is denied, either add the permission or use `-o` to write to
-  a directory you can already read.
-- Screenshots can contain sensitive information. Capture only when the request calls for it.
-
-**Related skills**
-
-- [`openai/skills@screenshot`](https://skills.sh/openai/skills/screenshot) — broader and
-  more polished, and the right choice on macOS, native Linux, or native Windows. It has no
-  WSL support, which is why this skill exists. Both can be installed side by side; IDs
-  differ (`wsl-screenshot` vs `screenshot`).
+Requires a project with `docs/` + `specs/<feature>/`. No dependencies. Details: `skills/living-docs-reconcile/SKILL.md`.
 
 ## Repository layout
 
 ```text
 agent-skills/
 └── skills/
-    ├── craft-to-agents/
-    │   ├── SKILL.md
-    │   ├── scripts/
-    │   │   ├── blocks.py
-    │   │   └── sync.py
-    │   └── tests/
-    │       ├── test_blocks.py
-    │       └── test_sync.py
-    ├── read-craft/
-    │   ├── SKILL.md
-    │   ├── scripts/
-    │   │   └── fetch.py
-    │   └── tests/
-    │       └── test_fetch.py
-    └── wsl-screenshot/
-        ├── SKILL.md
-        └── scripts/
-            ├── capture.sh
-            └── screenshot.ps1
+    ├── craft-to-agents/       # SKILL.md + scripts/ + tests/
+    ├── read-craft/            # SKILL.md + scripts/ + tests/
+    ├── wsl-screenshot/        # SKILL.md + scripts/
+    └── living-docs-reconcile/ # SKILL.md only
 ```
 
 ## License
